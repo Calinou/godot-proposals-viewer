@@ -1,0 +1,37 @@
+<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=author content="Godot Engine"><meta name=description content="View the currently open Godot proposals in a convenient way."><meta name=theme-color content="#3d8fcc"><title>Godot proposals viewer</title><link rel=icon href=favicon.png><link rel=stylesheet href=css/main.css><script defer src=thirdparty/ky.umd.min.js></script><script defer src=thirdparty/alpine.min.js></script><h1 style=text-align:center>Godot proposals viewer</h1><p>This page lists all open <a href=https://github.com/godotengine/godot-proposals>Godot proposals</a>
+with the ability to sort by popularity (highest number of +1 reactions, then lowest number of -1 reactions, then highest number of comments),
+or by newest or oldest.<p><a href=https://github.com/Calinou/godot-proposals-viewer>Contribute to this proposal viewer on GitHub!</a><div x-data=table() x-init="
+      $watch('labelFilter', (value) => {
+        const url = new URL(window.location.href);
+        if (value === '') {
+          url.searchParams.delete('filter');
+        } else {
+          url.searchParams.set('filter', value);
+        }
+        history.pushState(null, document.title, url.toString());
+      })
+      $watch('sort', (value) => {
+        const url = new URL(window.location.href);
+        if (value === '') {
+          url.searchParams.delete('sort');
+        } else {
+          url.searchParams.set('sort', value);
+        }
+        history.pushState(null, document.title, url.toString());
+      })
+      loadProposals()
+    "><template x-if=proposalsLoaded><span :style="`font-weight: ${labelFilter === '' ? 400 : 700}`">Filter:</span>
+<select x-model=labelFilter><option value title="Proposals not related to Godot itself">All proposals<option value=meta title="Proposals not related to Godot itself">Meta proposals<optgroup label=Topic><option value=topic:animation>Animation<option value=topic:assetlib>Asset library<option value=topic:audio>Audio<option value=topic:buildsystem>Build system<option value=topic:codestyle>Code style<option value=topic:core>Core<option value=topic:docs>Documentation<option value=topic:editor>Editor<option value=topic:export>Export<option value=topic:gdnative>GDNative<option value=topic:gdscript>GDScript<option value=topic:gui title="Graphical User Interface">GUI<option value=topic:import title="Resource importing system and asset pipeline">Import<option value=topic:input>Input<option value=topic:mono>Mono (C#)<option value=topic:navigation>Navigation<option value=topic:network>Network<option value=topic:physics>Physics<option value=topic:plugin title="Editor plugins">Plugin<option value=topic:porting>Porting<option value=topic:rendering>Rendering<option value=topic:shaders title="Godot shader language">Shaders<option value=topic:tests title="Unit testing / integration testing">Tests<option value=topic:visualscript>VisualScript<option value=topic:xr>XR<option value=topic:2d title="Any proposal related to 2D">2D<option value=topic:3d title="Any proposal related to 3D">3D<optgroup label=Platform><option value=platform:windows>Windows<option value=platform:macos>macOS<option value=platform:linuxbsd>Linux/*BSD<option value=platform:android>Android<option value=platform:ios>iOS<option value=platform:html5>HTML5<option value=platform:uwp title="Universal Windows Platform">UWP</select>
+<span :style="`margin-left: 1rem; font-weight: ${sort === '' ? 400 : 700}`">Sort:</span>
+<select x-model=sort><option value title="Sort proposals by popularity">Popularity<option value=newest title="Sort proposals by newest first">Newest<option value=oldest title="Sort proposals by oldest first">Oldest</select>
+<a :href="`https://github.com/godotengine/godot-proposals/issues${(labelFilter !== '' ? `/labels/${labelFilter}` : '')}`" target=_blank rel="noreferrer noopener" class=open-proposals><span x-text="`${proposalsFiltered(true).length} open proposals`"></span></a><div style=float:right><span :style="`font-weight: ${searchQuery === '' ? 400 : 700}`">Search:</span>
+<input x-model.debounce=searchQuery></input></div><table><thead class=headers><tr><td style=padding-left:4.0625rem>Title<td>Score<tbody><template x-for="proposal in proposalsFiltered()" :key=proposal.id><tr><td><span x-text="`#${proposal.number}`" style=display:inline-block;min-width:55px;margin-right:5px;text-align:right;color:var(--gray);margin-right:.25rem></span><span x-text="Math.floor(Date.parse(proposal.created_at) / 1000) > Math.floor(Date.now() / 1000) - 1209600 ? 'new' : ''" style=font-weight:700;color:var(--new-color);margin-right:.25rem></span><a :href=proposal.html_url x-html=formatProposalTitle(proposal.title) :title="`#${proposal.number}
+Opened by ${proposal.user.login} ${Math.floor((Math.floor(Date.now() / 1000) - Math.floor(Date.parse(proposal.created_at) / 1000)) / 86400)} days ago`"></a><td class=score-cell style=min-width:200px><span x-text="`+${proposal.reactions['+1']}`" :style="`
+                    color: var(--green);
+                    font-weight: ${proposal.reactions['+1'] >= 30 ? '700' : '400'};
+                  `"></span><span x-text="`-${proposal.reactions['-1']}`" :style="`
+                    color: var(--red);
+                    font-weight: ${proposal.reactions['-1'] >= 5 ? '700' : '400'};
+                    margin-left: 0.25rem;
+                  `"></span><meter min=0 :value="proposal.reactions['+1']" :max="proposal.reactions['+1'] + proposal.reactions['-1']" :style="`opacity: ${proposal.reactions['+1'] * 7.5}%; margin-left: 0.25rem;`"></meter>
+<span x-show="proposal.comments >= 1" x-text="`💬 ${proposal.comments}`" :style="`opacity: ${(0.25 + proposal.comments / 40) * 100}%`"></span></template></table></template><template x-if=!proposalsLoaded><p style="text-align:center;height:43e3px;padding-top:1.75rem;margin-top:3rem;background-image:linear-gradient(180deg,transparent 0%,transparent 50%,hsla(0,0%,50%,.1) 50%,hsla(0,0%,50%,.1) 100%);background-size:auto 3.5rem">Loading proposal list, this may take a while...</template></div><script>let searchParams=new URLSearchParams(location.search);function table(){return{proposals:[],proposalsLoaded:!1,labelFilter:searchParams.get('filter')||'',sort:searchParams.get('sort')||'',searchQuery:'',proposalsFiltered(b){let a;this.sort==''?a=this.sortProposalsPopularity:this.sort=='newest'?a=this.sortProposalsNewest:this.sort=='oldest'&&(a=this.sortProposalsOldest);const c=this.proposals.filter(a=>{if(this.labelFilter!=='')if(!a.labels.includes(this.labelFilter))return!1;if(this.searchQuery!==''&&!b)if(!a.title.toLowerCase().includes(this.searchQuery.toLowerCase()))return!1;return!0});return c.sort(a)},sortProposalsPopularity(a,b){return a.reactions["+1"]<b.reactions["+1"]?1:a.reactions["+1"]===b.reactions["+1"]?a.reactions["-1"]>b.reactions["-1"]?1:a.reactions["-1"]===b.reactions["-1"]?a.comments<b.comments?1:-1:-1:-1},sortProposalsNewest(a,b){return a.number<b.number?1:-1},sortProposalsOldest(a,b){return a.number>b.number?1:-1},async loadProposals(){this.proposals=await ky.get('proposals.json').json(),this.proposalsLoaded=!0},formatProposalTitle(b){const a=b.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");if(a.includes("`")){let b=!1;return Array.prototype.map.call(a,a=>{return a==="`"?b?(b=!1,"</code>"):(b=!0,"<code>"):a}).join('')}return a}}}</script>
